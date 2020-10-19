@@ -36,7 +36,7 @@ flipped = True
 coord_lambda = 5
 no_object_lambda = 0.5
 
-batch_size = 16
+batch_size = 32
 epochs = 20
 
 image_size = 448

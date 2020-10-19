@@ -23,6 +23,7 @@ class Model():
 		self.learning_rate = setting.learning_rate
 		self.moder_save_path = setting.moder_save_path
 		self.epochs = setting.epochs
+		self.batch_size = setting.batch_size
 		self.model = self._build_model()
 		self.optimizer = self._optimizer()
 		self.loss = self._loss()
@@ -180,20 +181,49 @@ class Model():
 	def _compile(self):
 		self.model.compile(optimizer=self.optimizer, loss=self.loss)
 	
-	def train(self):
-		train_generator = dg.DataGenerator(train_data_path, cfg.batch_size, train_transform_param)
-		validation_generator = dg.DataGenerator(validation_data_path, cfg.batch_size)
+	def train(self, train_tfrecord, val_tfrecord):
+		dataset = tf.data.TFRecordDataset(train_tfrecord)
+		val_dataset = tf.data.TFRecordDataset(val_tfrecord)
+		
+		feature_description = {
+			'label': tf.io.FixedLenFeature([], tf.string),
+			'image_raw': tf.io.FixedLenFeature([], tf.string)
+		}
+		
+		def read_and_decode(example_string):
+			'''
+			从TFrecord格式文件中读取数据
+			'''
+			feature_dict = tf.io.parse_single_example(example_string, feature_description)
+			image = tf.io.decode_png(feature_dict['image_raw'])
+			label = tf.io.decode_png(feature_dict['label'])
+			image = tf.cast(image, dtype='float32') / 255.
+			label = tf.cast(label, dtype='float32') / 255.
+			return image, label
+		
+		dataset = dataset.repeat()
+		dataset = dataset.map(read_and_decode)
+		dataset = dataset.shuffle(buffer_size=100)
+		batchs = dataset.batch(batch_size=self.batch_size)
+		
+		val_dataset = val_dataset.repeat()
+		val_dataset = val_dataset.map(read_and_decode)
+		val_dataset = val_dataset.shuffle(buffer_size=100)
+		val_batchs = val_dataset.batch(batch_size=self.batch_size)
 		
 		earlystop = ks.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=3, mode='min')
 		reducelr = ks.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, mode='auto',
 												  min_delta=0.0001, cooldown=0, min_lr=0)
 		tensorboard = ks.callbacks.TensorBoard(log_dir='log', histogram_freq=0, batch_size=cfg.batch_size,
 											   write_graph=True, write_images=False)
-		self.model.fit_generator(
-			epochs=self.epochs,
-			generator=train_generator,
-			validation_data=validation_generator,
-			callbacks=[earlystop, reducelr, tensorboard]
+		history = self.model.fit(
+			batchs,
+			validation_data=val_batchs,
+			# todo 训练的batch_num 和 验证的batch_num
+			steps_per_epoch=batchs. // self.batch_size,
+			validation_steps= // self.batch_size,
+				  epochs = self.epochs,
+						   callbacks = [earlystop, reducelr, tensorboard]
 		)
 		self.model.save_weights(self.moder_save_path)
 	

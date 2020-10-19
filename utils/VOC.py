@@ -13,9 +13,10 @@ import random
 import numpy as np
 import xml.etree.ElementTree as ET
 import tensorflow.keras as ks
+import tensorflow as tf
 
 
-class VOC(ks.utils.Sequence):
+class VOC():
 	
 	def __init__(self):
 		self.data_path = setting.data_path
@@ -26,6 +27,7 @@ class VOC(ks.utils.Sequence):
 		self.image_path = setting.image_path
 		self.train_percentage = setting.train_percentage
 		self.flipped = setting.flipped
+		self.tfrecord_path = setting.tfrecord_path
 		
 		# 训练数据label
 		self.label_train = None
@@ -33,26 +35,32 @@ class VOC(ks.utils.Sequence):
 		self.label_val = None
 		self.prepare()
 		
-		self.image_data_generator = ks.preprocessing.image.ImageDataGenerator()
 	
 	def prepare(self):
 		label_train, label_val = self.load_labels()
 		if self.flipped:
-			get_label_train_cp = copy.deepcopy(label_train[:len(label_train) // 2])
-			for idx in range(len(get_label_train_cp)):
-				get_label_train_cp[idx]["flipped"] = True
-				get_label_train_cp[idx]["label"] = get_label_train_cp[idx][:, ::-1, :]
+			label_train_cp = copy.deepcopy(label_train[:len(label_train) // 2])
+			# 取一半的label_train[{imagename,label,flipped}]
+			for idx in range(len(label_train_cp)):
+				# 遍历这一半的 label_train
+				label_train_cp[idx]["flipped"] = True
+				label_train_cp[idx]["label"] = label_train_cp[idx][:, ::-1, :]
 				for i in range(self.cell_size):
 					for j in range(self.cell_size):
-						if get_label_train_cp[idx]["label"][i][j][0] == 1:
-							get_label_train_cp[idx]["label"][i][j][1] = self.image_size - 1 \
-																		- get_label_train_cp[idx]["label"][i][j][1]
-				label_train += get_label_train_cp
-			np.random(label_train)
+						if label_train_cp[idx]["label"][i][j][0] == 1:
+							# box 中心点 x 的坐标
+							label_train_cp[idx]["label"][i][j][1] = self.image_size - 1 \
+																	- label_train_cp[idx]["label"][i][j][1]
+				label_train += label_train_cp
+			np.random.shuffle(label_train)
 		self.label_train = label_train
 		self.label_val = label_val
 	
-	# 读取 image，并上下翻转
+	# 获取训练集总数和验证集总数
+	def get_num(self):
+		pass
+	
+	# 读取 image，并左右翻转
 	
 	def read_image(self, imgname, flipped=False):
 		image = cv2.imread(imgname)
@@ -85,7 +93,7 @@ class VOC(ks.utils.Sequence):
 			label, num = self.load_pascal_annotation(index)
 			if num == 0:
 				continue
-			imgname = os.path(self.image_path, index + ".jpg")
+			imgname = os.path.join(self.image_path, index + ".jpg")
 			labels_val.append({"imgname": imgname, "label": label, "flipped": False})
 		
 		return labels_train, labels_val
@@ -122,3 +130,46 @@ class VOC(ks.utils.Sequence):
 			label[y_id, x_id, 5 + class_id] = 1
 		
 		return label, len(objs)
+	
+	# 转化为 tfrecord
+	def toTfrecord(self):
+		train_writer = tf.python_io.TFRecordWriter(self.tfrecord_path + "train.tfrecords")
+		for i in range(self.label_train):
+			imgname = self.label_train[i]["iname"]
+			flipped = self.label_train[i]["flipped"]
+			image = self.read_image(imgname, flipped)
+			label = self.label_train[i]["label"]
+			
+			label_raw = label.tobytes()
+			bytes_list_label = tf.train.BytesList(value=[label_raw])
+			label_feature = tf.train.Feature(bytes_list=bytes_list_label)
+			image_raw = image.tobytes()
+			bytes_list_image = tf.train.BytesList(value=[image_raw])
+			image_feature = tf.train.Feature(bytes_lits=bytes_list_image)
+			feature = tf.train.Features(feature={
+				"label": label_feature,
+				"img_raw": image_feature
+			})
+			example = tf.train.Example(feature)
+			train_writer.write(example.SerializeToString())
+		
+		train_writer.close()
+		
+		val_writer = tf.python_io.TFRecordWriter(self.tfrecord_path + "val.tfrecords")
+		
+		for k in range(len(self.label_val)):
+			imname = self.label_val[k]['imname']
+			flipped = self.label_val[k]['flipped']
+			image = self.read_image(imname, flipped)
+			label = self.label_val[k]['label']
+			
+			label_raw = label.tobytes()
+			img_raw = image.tobytes()  # 将图片转化为原生bytes
+			example = tf.train.Example(features=tf.train.Features(feature={
+				"label": tf.train.Feature(bytes_list=tf.train.BytesList(value=[label_raw])),
+				"img_raw": tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
+			}))
+			val_writer.write(example.SerializeToString())  # 序列化为字符串
+		
+		val_writer.close()
+		return self.tfrecord_path + "train.tfrecords", self.tfrecord_path + "val.tfrecords"
