@@ -17,16 +17,16 @@ num_class = len(class_name)
 train_percentage = 0.9
 
 # 数据路径
-data_path = "../data/VOCdevkit/VOC2012/"
-image_path = "../data/VOCdevkit/VOC2012/JPEGImages/"
+data_path = "data/VOCdevkit/VOC2012"
+image_path = "data/VOCdevkit/VOC2012/JPEGImages"
 
 # 预训练模型路径
-pre_model = "../model/YOLO_small.ckpt"
+pre_model = "model/YOLO_small.ckpt"
 # 模型保存路径
-moder_save_path = "../model/"
+moder_save_path = "model"
 
 # tfrecord 数据路径
-tfrecord_path = "../data/tfrecord/"
+tfrecord_path = "data/tfrecord/"
 
 train_path = ""
 val_path = ""

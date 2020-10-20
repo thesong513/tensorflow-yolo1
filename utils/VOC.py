@@ -44,14 +44,15 @@ class VOC():
 			for idx in range(len(label_train_cp)):
 				# 遍历这一半的 label_train
 				label_train_cp[idx]["flipped"] = True
-				label_train_cp[idx]["label"] = label_train_cp[idx][:, ::-1, :]
+				
+				label_train_cp[idx]["label"] = label_train_cp[idx]["label"][:, ::-1, :]
 				for i in range(self.cell_size):
 					for j in range(self.cell_size):
 						if label_train_cp[idx]["label"][i][j][0] == 1:
 							# box 中心点 x 的坐标
 							label_train_cp[idx]["label"][i][j][1] = self.image_size - 1 \
 																	- label_train_cp[idx]["label"][i][j][1]
-				label_train += label_train_cp
+			label_train += label_train_cp
 			np.random.shuffle(label_train)
 		self.label_train = label_train
 		self.label_val = label_val
@@ -134,9 +135,9 @@ class VOC():
 	
 	# 转化为 tfrecord
 	def toTfrecord(self):
-		train_writer = tf.python_io.TFRecordWriter(self.tfrecord_path + "train.tfrecords")
-		for i in range(self.label_train):
-			imgname = self.label_train[i]["iname"]
+		train_writer = tf.io.TFRecordWriter(self.tfrecord_path + "train.tfrecords")
+		for i in range(len(self.label_train)):
+			imgname = self.label_train[i]["imgname"]
 			flipped = self.label_train[i]["flipped"]
 			image = self.read_image(imgname, flipped)
 			label = self.label_train[i]["label"]
@@ -146,22 +147,22 @@ class VOC():
 			label_feature = tf.train.Feature(bytes_list=bytes_list_label)
 			image_raw = image.tobytes()
 			bytes_list_image = tf.train.BytesList(value=[image_raw])
-			image_feature = tf.train.Feature(bytes_lits=bytes_list_image)
+			image_feature = tf.train.Feature(bytes_list=bytes_list_image)
 			feature = tf.train.Features(feature={
 				"label": label_feature,
 				"img_raw": image_feature
 			})
-			example = tf.train.Example(feature)
+			example = tf.train.Example(features=feature)
 			train_writer.write(example.SerializeToString())
-		
+			print(i)
 		train_writer.close()
 		
-		val_writer = tf.python_io.TFRecordWriter(self.tfrecord_path + "val.tfrecords")
+		val_writer = tf.io.TFRecordWriter(self.tfrecord_path + "val.tfrecords")
 		
 		for k in range(len(self.label_val)):
-			imname = self.label_val[k]['imname']
+			imgname = self.label_val[k]['imgname']
 			flipped = self.label_val[k]['flipped']
-			image = self.read_image(imname, flipped)
+			image = self.read_image(imgname, flipped)
 			label = self.label_val[k]['label']
 			
 			label_raw = label.tobytes()
