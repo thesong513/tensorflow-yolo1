@@ -26,8 +26,8 @@ class Model():
 		self.epochs = setting.epochs
 		self.batch_size = setting.batch_size
 		self.model = self._build_model()
-		# self.optimizer = self._optimizer()
-		# self.loss = self._loss()
+		self.optimizer = self._optimizer()
+		self.loss = self._loss()
 	
 	def _build_model(self):
 		model = ks.Sequential()
