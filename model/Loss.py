@@ -12,6 +12,7 @@ from utils import setting
 class Loss():
 	
 	def __init__(self):
+		self.object_class_num = setting.num_class
 		self.image_size = setting.image_size
 		self.cell_size = setting.cell_size
 		self.box_per_cell = setting.box_per_cell
