@@ -166,7 +166,7 @@ class Model():
 		
 		model.add(layers.Dense(units=(self.cell_size * self.cell_size * (self.box_per_cell * (4 + 1) + self.num_class)),
 							   name="fc27"))
-		model.add(layers.Softmax(name="softmax27"))
+		model.add(layers.LeakyReLU(name="softmax27"))
 		
 		model.add(layers.Reshape((self.cell_size, self.cell_size, (self.box_per_cell * (4 + 1) + self.num_class)),
 								 name="reshape27"))
