@@ -19,14 +19,15 @@ class Model():
 		self.dropout = setting.dropout
 		self.cell_size = setting.cell_size
 		self.box_per_cell = setting.box_per_cell
-		self.class_num = setting.class_name
+		self.class_name = setting.class_name
+		self.num_class = setting.num_class
 		self.learning_rate = setting.learning_rate
 		self.moder_save_path = setting.moder_save_path
 		self.epochs = setting.epochs
 		self.batch_size = setting.batch_size
 		self.model = self._build_model()
-		self.optimizer = self._optimizer()
-		self.loss = self._loss()
+		# self.optimizer = self._optimizer()
+		# self.loss = self._loss()
 	
 	def _build_model(self):
 		model = ks.Sequential()
@@ -157,7 +158,8 @@ class Model():
 		model.add(layers.LeakyReLU(self.leaky_relu))
 		
 		model.add(layers.Flatten())
-		model.add(layers.Dense(units=4096, name="fc26"))
+		# 4096
+		model.add(layers.Dense(units=1024, name="fc26"))
 		model.add(layers.LeakyReLU(self.leaky_relu))
 		model.add(layers.Dropout(self.dropout))
 		
@@ -214,7 +216,7 @@ class Model():
 		earlystop = ks.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=3, mode='min')
 		reducelr = ks.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, mode='auto',
 												  min_delta=0.0001, cooldown=0, min_lr=0)
-		tensorboard = ks.callbacks.TensorBoard(log_dir='log', histogram_freq=0, batch_size=cfg.batch_size,
+		tensorboard = ks.callbacks.TensorBoard(log_dir='log', histogram_freq=0, batch_size=self.batch_size,
 											   write_graph=True, write_images=False)
 		
 		history = self.model.fit(
@@ -230,3 +232,6 @@ class Model():
 	
 	def summary(self):
 		self.model.summary()
+		
+		
+  
