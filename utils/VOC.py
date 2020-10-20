@@ -135,43 +135,44 @@ class VOC():
 	
 	# 转化为 tfrecord
 	def toTfrecord(self):
-		train_writer = tf.io.TFRecordWriter(self.tfrecord_path + "train.tfrecords")
-		for i in range(len(self.label_train)):
-			imgname = self.label_train[i]["imgname"]
-			flipped = self.label_train[i]["flipped"]
-			image = self.read_image(imgname, flipped)
-			label = self.label_train[i]["label"]
+		if not os.path.exists(self.tfrecord_path + "train.tfrecords"):
+			train_writer = tf.io.TFRecordWriter(self.tfrecord_path + "train.tfrecords")
+			for i in range(len(self.label_train)):
+				imgname = self.label_train[i]["imgname"]
+				flipped = self.label_train[i]["flipped"]
+				image = self.read_image(imgname, flipped)
+				label = self.label_train[i]["label"]
+				
+				label_raw = label.tobytes()
+				bytes_list_label = tf.train.BytesList(value=[label_raw])
+				label_feature = tf.train.Feature(bytes_list=bytes_list_label)
+				image_raw = image.tobytes()
+				bytes_list_image = tf.train.BytesList(value=[image_raw])
+				image_feature = tf.train.Feature(bytes_list=bytes_list_image)
+				feature = tf.train.Features(feature={
+					"label": label_feature,
+					"img_raw": image_feature
+				})
+				example = tf.train.Example(features=feature)
+				train_writer.write(example.SerializeToString())
+				print(i)
+			train_writer.close()
+		if not os.path.exists(self.tfrecord_path + "val.tfrecords"):
+			val_writer = tf.io.TFRecordWriter(self.tfrecord_path + "val.tfrecords")
 			
-			label_raw = label.tobytes()
-			bytes_list_label = tf.train.BytesList(value=[label_raw])
-			label_feature = tf.train.Feature(bytes_list=bytes_list_label)
-			image_raw = image.tobytes()
-			bytes_list_image = tf.train.BytesList(value=[image_raw])
-			image_feature = tf.train.Feature(bytes_list=bytes_list_image)
-			feature = tf.train.Features(feature={
-				"label": label_feature,
-				"img_raw": image_feature
-			})
-			example = tf.train.Example(features=feature)
-			train_writer.write(example.SerializeToString())
-			print(i)
-		train_writer.close()
-		
-		val_writer = tf.io.TFRecordWriter(self.tfrecord_path + "val.tfrecords")
-		
-		for k in range(len(self.label_val)):
-			imgname = self.label_val[k]['imgname']
-			flipped = self.label_val[k]['flipped']
-			image = self.read_image(imgname, flipped)
-			label = self.label_val[k]['label']
+			for k in range(len(self.label_val)):
+				imgname = self.label_val[k]['imgname']
+				flipped = self.label_val[k]['flipped']
+				image = self.read_image(imgname, flipped)
+				label = self.label_val[k]['label']
+				
+				label_raw = label.tobytes()
+				img_raw = image.tobytes()  # 将图片转化为原生bytes
+				example = tf.train.Example(features=tf.train.Features(feature={
+					"label": tf.train.Feature(bytes_list=tf.train.BytesList(value=[label_raw])),
+					"img_raw": tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
+				}))
+				val_writer.write(example.SerializeToString())  # 序列化为字符串
 			
-			label_raw = label.tobytes()
-			img_raw = image.tobytes()  # 将图片转化为原生bytes
-			example = tf.train.Example(features=tf.train.Features(feature={
-				"label": tf.train.Feature(bytes_list=tf.train.BytesList(value=[label_raw])),
-				"img_raw": tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
-			}))
-			val_writer.write(example.SerializeToString())  # 序列化为字符串
-		
-		val_writer.close()
+			val_writer.close()
 		return self.tfrecord_path + "train.tfrecords", self.tfrecord_path + "val.tfrecords"

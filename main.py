@@ -16,7 +16,6 @@ def main():
 	with tf.device("/cpu:0"):
 		model = Model.Model()
 		model.summary()
-		model.com
 		history = model.train(train_tfrecords,val_tfrecords, train_size, val_size)
 	
 	

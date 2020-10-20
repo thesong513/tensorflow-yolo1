@@ -28,6 +28,7 @@ class Model():
 		self.model = self._build_model()
 		self.optimizer = self._optimizer()
 		self.loss = self._loss()
+		self._compile()
 	
 	def _build_model(self):
 		model = ks.Sequential()
