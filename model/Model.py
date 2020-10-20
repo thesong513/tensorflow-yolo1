@@ -181,7 +181,7 @@ class Model():
 	def _compile(self):
 		self.model.compile(optimizer=self.optimizer, loss=self.loss)
 	
-	def train(self, train_tfrecord, val_tfrecord):
+	def train(self, train_tfrecord, val_tfrecord, train_szie, val_size):
 		dataset = tf.data.TFRecordDataset(train_tfrecord)
 		val_dataset = tf.data.TFRecordDataset(val_tfrecord)
 		
@@ -216,16 +216,17 @@ class Model():
 												  min_delta=0.0001, cooldown=0, min_lr=0)
 		tensorboard = ks.callbacks.TensorBoard(log_dir='log', histogram_freq=0, batch_size=cfg.batch_size,
 											   write_graph=True, write_images=False)
+		
 		history = self.model.fit(
 			batchs,
 			validation_data=val_batchs,
-			# todo 训练的batch_num 和 验证的batch_num
-			steps_per_epoch=batchs. // self.batch_size,
-			validation_steps= // self.batch_size,
+			steps_per_epoch=train_szie // self.batch_size,
+			validation_steps= val_size// self.batch_size,
 				  epochs = self.epochs,
 						   callbacks = [earlystop, reducelr, tensorboard]
 		)
 		self.model.save_weights(self.moder_save_path)
+		return history
 	
 	def summary(self):
 		self.model.summary()

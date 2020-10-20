@@ -57,11 +57,12 @@ class VOC():
 		self.label_val = label_val
 	
 	# 获取训练集总数和验证集总数
-	def get_num(self):
-		pass
+	def get_voc_size(self):
+		train_size = len(self.label_train)
+		val_size = len(self.label_val)
+		return train_size, val_size
 	
 	# 读取 image，并左右翻转
-	
 	def read_image(self, imgname, flipped=False):
 		image = cv2.imread(imgname)
 		image = cv2.resize(image, (self.image_size, self.image_size))
