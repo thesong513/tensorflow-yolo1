@@ -119,5 +119,4 @@ class Loss():
 		box_loss_mean = self.box_loss(true_box_grid, pred_box_grid, object_mask)
 		object_loss_mean, no_object_loss_mean = self.confidence_loss(pred_confidence, object_mask)
 		class_loss_mean = self.class_loss(true_class, pred_class, true_object)
-		
 		return box_loss_mean + object_loss_mean + no_object_loss_mean + class_loss_mean

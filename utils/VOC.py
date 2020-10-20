@@ -34,7 +34,6 @@ class VOC():
 		# 验证数据label
 		self.label_val = None
 		self.prepare()
-		
 	
 	def prepare(self):
 		label_train, label_val = self.load_labels()
@@ -151,11 +150,11 @@ class VOC():
 				image_feature = tf.train.Feature(bytes_list=bytes_list_image)
 				feature = tf.train.Features(feature={
 					"label": label_feature,
-					"img_raw": image_feature
+					"image_raw": image_feature
 				})
 				example = tf.train.Example(features=feature)
 				train_writer.write(example.SerializeToString())
-				print(i)
+			# print(i)
 			train_writer.close()
 		if not os.path.exists(self.tfrecord_path + "val.tfrecords"):
 			val_writer = tf.io.TFRecordWriter(self.tfrecord_path + "val.tfrecords")
@@ -170,7 +169,7 @@ class VOC():
 				img_raw = image.tobytes()  # 将图片转化为原生bytes
 				example = tf.train.Example(features=tf.train.Features(feature={
 					"label": tf.train.Feature(bytes_list=tf.train.BytesList(value=[label_raw])),
-					"img_raw": tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
+					"image_raw": tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw]))
 				}))
 				val_writer.write(example.SerializeToString())  # 序列化为字符串
 			

@@ -178,7 +178,7 @@ class Model():
 		return loss
 	
 	def _optimizer(self):
-		optimizer = ks.optimizers.Adam(lr=self.learning_rate)
+		optimizer = ks.optimizers.Adam(lr=self.learning_rate, clipnorm=1)
 		return optimizer
 	
 	def _compile(self):
@@ -194,14 +194,12 @@ class Model():
 		}
 		
 		def read_and_decode(example_string):
-			'''
-			从TFrecord格式文件中读取数据
-			'''
 			feature_dict = tf.io.parse_single_example(example_string, feature_description)
-			image = tf.io.decode_png(feature_dict['image_raw'])
-			label = tf.io.decode_png(feature_dict['label'])
-			image = tf.cast(image, dtype='float32') / 255.
-			label = tf.cast(label, dtype='float32') / 255.
+			image = tf.io.decode_raw(feature_dict['image_raw'], tf.uint8)
+			image = tf.reshape(image, [self.image_size, self.image_size, 3])
+			image = (tf.cast(image, tf.float32) / 255.0 - 0.5) * 2
+			label = tf.io.decode_raw(feature_dict['label'], tf.float64)
+			label = tf.reshape(label, [self.cell_size, self.cell_size, 25])
 			return image, label
 		
 		dataset = dataset.repeat()
@@ -209,7 +207,7 @@ class Model():
 		dataset = dataset.shuffle(buffer_size=100)
 		batchs = dataset.batch(batch_size=self.batch_size)
 		
-		val_dataset = val_dataset.repeat()
+		# val_dataset = val_dataset.repeat()
 		val_dataset = val_dataset.map(read_and_decode)
 		val_dataset = val_dataset.shuffle(buffer_size=100)
 		val_batchs = val_dataset.batch(batch_size=self.batch_size)
