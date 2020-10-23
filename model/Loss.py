@@ -19,6 +19,7 @@ class Loss():
 		self.class_num = setting.class_name
 		self.coord_lambda = setting.coord_lambda
 		self.no_object_lambda = setting.no_object_lambda
+		self.batch_size = setting.batch_size
 	
 	def iou(self, box1, box2):
 		box1 = tf.stack([box1[:, :, :, :, 0] - box1[:, :, :, :, 2] / 2.0,
@@ -31,6 +32,7 @@ class Loss():
 						 box2[:, :, :, :, 1] - box2[:, :, :, :, 3] / 2.0,
 						 box2[:, :, :, :, 0] + box2[:, :, :, :, 2] / 2.0,
 						 box2[:, :, :, :, 1] + box2[:, :, :, :, 3] / 2.0])
+		
 		box2 = tf.transpose(box2, [1, 2, 3, 4, 0])
 		
 		left_up = tf.maximum(box1[:, :, :, :, :2], box2[:, :, :, :, :2])
@@ -44,7 +46,7 @@ class Loss():
 		
 		union_area = tf.maximum(box1_area + box2_area - inter_area, 1e-10)
 		
-		return tf.clip_by_value(inter_area / union_area, 0.0, 1.0)
+		return tf.clip_by_value(inter_area / union_area, 0.0, 1.0, name="iou")
 	
 	def box_loss(self, true_box, pred_box, object_mask):
 		mask = tf.expand_dims(object_mask, 4)
@@ -69,7 +71,6 @@ class Loss():
 	def class_loss(self, true_class, pred_class, true_object):
 		class_diff = true_object * (true_class - pred_class)
 		class_loss_mean = tf.reduce_mean(tf.reduce_sum(tf.square(class_diff), axis=[1, 2, 3]), name='class_loss')
-		
 		return class_loss_mean
 	
 	def loss(self, y_true, y_pred):
@@ -88,10 +89,14 @@ class Loss():
 		true_box_image = tf.tile(true_box_image, [1, 1, 1, self.box_per_cell, 1])
 		true_class = y_true[:, :, :, 5:]
 		
+		# todo 产生0
 		offset = np.transpose(np.reshape(np.array([np.arange(self.cell_size)] * self.cell_size * self.box_per_cell),
 										 (self.box_per_cell, self.cell_size, self.cell_size)), (1, 2, 0))
 		offset = tf.constant(offset, dtype=tf.float32)
 		offset = tf.reshape(offset, [1, self.cell_size, self.cell_size, self.box_per_cell])
+		print(1, offset)
+		offset = tf.tile(offset, [self.batch_size, 1, 1, 1])
+		print(2, offset)
 		
 		pred_box_grid = tf.stack([pred_box[:, :, :, :, 0],
 								  pred_box[:, :, :, :, 1],
